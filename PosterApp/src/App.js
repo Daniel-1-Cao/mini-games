@@ -3,7 +3,9 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import ReactToPdf from "react-to-pdf";
 import { Rnd } from "react-rnd";
+import { SketchPicker, TwitterPicker } from "react-color";
 import "./App.css";
+import icon from "./icon.png";
 
 const fonts = [
   "Are You Serious",
@@ -40,12 +42,42 @@ function App() {
   const [enableBorder, setEnableBorder] = useState(false);
   const [clicked, setClicked] = useState(-1);
   const [show, setShow] = useState(null);
+  const [ctrlDown, setCtrlDown] = useState(false);
+  const [clipboard, setClipboard] = useState([]);
+  const [backgroundColor, setBackgroundColor] = useState("white");
+  const [currentColor, setCurrentColor] = useState("black");
+  const [link, setLink] = useState("");
 
   useEffect(() => {
-    const handleDelete = (event) => {
-      console.log(event.keyCode, clicked);
+    const handleCtrlDown = (event) => {
+      if (event.keyCode === 17) {
+        setCtrlDown(true);
+      }
+    };
 
-      if (event.keyCode === 8 && clicked !== -1) {
+    const handleCtrlUp = (event) => {
+      if (event.keyCode === 17) {
+        setCtrlDown(false);
+      }
+    };
+
+    const handleCV = (event) => {
+      if (clicked !== -1 && ctrlDown && event.keyCode === 67) {
+        setClipboard(elements[clicked]);
+        setShow("Copied to clipboard!");
+        setTimeout(() => setShow(null), 2000);
+      }
+      if (event.keyCode === 86 && ctrlDown) {
+        const copyElements = elements;
+        copyElements.push(clipboard);
+        setElements(copyElements);
+        setShow("Pasted to clipboard!");
+        setTimeout(() => setShow(null), 2000);
+      }
+    };
+
+    const handleDelete = (event) => {
+      if (ctrlDown && event.keyCode === 8 && clicked !== -1) {
         let copyElements = elements;
         copyElements.splice(clicked, 1);
         setElements(copyElements);
@@ -55,13 +87,19 @@ function App() {
       }
     };
 
+    window.addEventListener("keydown", handleCtrlDown);
+    window.addEventListener("keyup", handleCtrlUp);
+    window.addEventListener("keydown", handleCV);
     window.addEventListener("keydown", handleDelete);
 
     return () => {
+      window.removeEventListener("keydown", handleCtrlDown);
+      window.removeEventListener("keyup", handleCtrlUp);
+      window.removeEventListener("keydown", handleCV);
       window.removeEventListener("keydown", handleDelete);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clicked]);
+  }, [clicked, ctrlDown, clipboard]);
 
   const style = {
     display: "flex",
@@ -93,6 +131,19 @@ function App() {
     setNumber(value < min ? min : Math.min(value, max));
   };
 
+  const handleChange = (color) => {
+    setBackgroundColor(color.hex);
+  };
+
+  const handleChangeComplete = (color) => {
+    setCurrentColor(color.hex);
+    if (clicked !== -1) {
+      let copyElements = [...elements];
+      copyElements[clicked][3] = color.hex;
+      setElements(copyElements);
+    }
+  };
+
   const renderElement = (element, i) => {
     if (element[0] === "img") {
       return (
@@ -106,7 +157,6 @@ function App() {
           }}
           onResize={(e, dir, elementRef, delta) => {
             const img = elementRef.getElementsByTagName("img")[0];
-            console.log(img.width, delta.width, startSize[0]);
             img.style.width = startSize[0] + delta.width + "px";
             img.style.height = startSize[1] + delta.height + "px";
           }}
@@ -150,13 +200,13 @@ function App() {
           }}
           onClick={() => {
             setCurrentFont(element[2]);
-            console.log(i);
+            setCurrentColor(element[3]);
             setClicked(i);
           }}
         >
           <p
             className={element[2] ? element[2] : "font17"}
-            style={{ fontSize: "16px", marginBottom: 0 }}
+            style={{ fontSize: "16px", marginBottom: 0, color: element[3] }}
           >
             {element[1]}
           </p>
@@ -176,66 +226,148 @@ function App() {
       }}
     >
       <div className="d-flex flex-column m-3" style={{ width: "33vw" }}>
-        <h1 className="font12">Poster maker</h1>
-        <hr />
-        <div className="d-flex flex-column" name="page-setting">
-          <h4 className="font15">Page setting</h4>
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <label
-                className="input-group-text"
-                for="inputGroupSelect01"
-                style={{ backgroundColor: "#7027A0", color: "#FECD1A" }}
-              >
-                Orientation
-              </label>
-            </div>
-            <select
-              className="form-control"
-              id="inputGroupSelect01"
-              style={{ backgroundColor: "#C996CC", color: "black" }}
-              onChange={(e) => {
-                setOrientation(e.target.value);
-                const temp = ref.current.style.width;
-                ref.current.style.width = ref.current.style.height;
-                ref.current.style.height = temp;
-              }}
+        <h1 className="font12" style={{ fontSize: "60px" }}>
+          Poster maker
+        </h1>
+        <div>
+          <hr />
+        </div>
+
+        <div className="d-flex flex-column">
+          <h4 className="font15">General setting</h4>
+          <div className="d-flex flex-row">
+            <div
+              className="d-flex flex-column"
+              name="page-setting"
+              style={{ width: "50%", marginRight: "16px" }}
             >
-              <option selected value="portrait">
-                Portrait
-              </option>
-              <option value="Landscape">Landscape</option>
-            </select>
-          </div>
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
+              <div className="input-group mb-3">
+                <div className="input-group-prepend">
+                  <label
+                    className="input-group-text"
+                    for="inputGroupSelect01"
+                    style={{ backgroundColor: "#7027A0", color: "#FECD1A" }}
+                  >
+                    Orientation
+                  </label>
+                </div>
+                <select
+                  className="form-control"
+                  id="inputGroupSelect01"
+                  style={{ backgroundColor: "#C996CC", color: "black" }}
+                  onChange={(e) => {
+                    setOrientation(e.target.value);
+                    const temp = ref.current.style.width;
+                    ref.current.style.width = ref.current.style.height;
+                    ref.current.style.height = temp;
+                  }}
+                >
+                  <option selected value="portrait">
+                    Portrait
+                  </option>
+                  <option value="Landscape">Landscape</option>
+                </select>
+              </div>
+              <div className="input-group mb-3">
+                <div className="input-group-prepend">
+                  <label
+                    className="input-group-text"
+                    for="inputGroupNumber01"
+                    style={{ backgroundColor: "#7027A0", color: "#FECD1A" }}
+                  >
+                    Scale
+                  </label>
+                </div>
+                <input
+                  style={{ backgroundColor: "#C996CC", color: "black" }}
+                  className="form-control"
+                  id="inputGroupNumber01"
+                  type="number"
+                  value={number}
+                  min={0.5}
+                  max={2}
+                  placeholder="0.5-2"
+                  onChange={onNumberChange}
+                />
+              </div>
+
+              <button
+                style={{
+                  backgroundColor: "#7027A0",
+                  color: "#FECD1A",
+                }}
+                className="btn"
+                onClick={() => {
+                  setEnableBorder(!enableBorder);
+                }}
+              >
+                Show/Hide border
+              </button>
+
+              <ul
+                className="list-group list-group-flush border round-3 border-2 border-dark"
+                style={{ marginTop: "16px" }}
+              >
+                <li
+                  className="list-group-item"
+                  style={{ backgroundColor: "#FECD1A" }}
+                >
+                  <label
+                    className="input-group-text"
+                    style={{
+                      backgroundColor: "#7027A0",
+                      color: "#FECD1A",
+                      justifyContent: "center",
+                    }}
+                  >
+                    Instructions
+                  </label>
+                </li>
+                <li
+                  class="list-group-item"
+                  style={{ backgroundColor: "#FECD1A" }}
+                >
+                  Click to select elements
+                </li>
+                <li
+                  class="list-group-item"
+                  style={{ backgroundColor: "#FECD1A" }}
+                >
+                  Ctrl + backspace to delete elements
+                </li>
+                <li
+                  class="list-group-item"
+                  style={{ backgroundColor: "#FECD1A" }}
+                >
+                  Ctrl + C/V to copy and paste
+                </li>
+              </ul>
+            </div>
+            <div className="d-flex flex-column">
               <label
                 className="input-group-text"
-                for="inputGroupNumber01"
                 style={{ backgroundColor: "#7027A0", color: "#FECD1A" }}
               >
-                Scale
+                Background color
               </label>
+              <SketchPicker color={backgroundColor} onChange={handleChange} />
             </div>
-            <input
-              style={{ backgroundColor: "#C996CC", color: "black" }}
-              className="form-control"
-              id="inputGroupNumber01"
-              type="number"
-              value={number}
-              min={0.5}
-              max={2}
-              placeholder="0.5-2"
-              onChange={onNumberChange}
-            />
           </div>
         </div>
-        <hr />
+
+        <div>
+          <hr border="1px" />
+        </div>
+
         <div className="d-flex flex-column" name="add-text">
           <h4 className="font15">Add text</h4>
           <div className="input-group mb-3">
             <input
-              style={{ backgroundColor: "#C996CC", color: "black" }}
+              style={{
+                backgroundColor: "#C996CC",
+                color: "black",
+                border: "2px solid #3D2C8D",
+              }}
               placeholder="type..."
               className="form-control"
               type="text"
@@ -249,11 +381,11 @@ function App() {
               style={{ marginLeft: "12px", backgroundColor: "#3D2C8D" }}
               onClick={() => {
                 const copyElements = elements;
-                console.log(currentFont);
-                copyElements.push(["text", text, currentFont]);
+                copyElements.push(["text", text, currentFont, currentColor]);
                 setElements(copyElements);
                 setText("");
                 setShow("Text added!");
+                setTimeout(() => setShow(null), 2000);
               }}
             >
               Add
@@ -293,23 +425,113 @@ function App() {
               })}
             </select>
           </div>
+          <div className="input-group mb-3">
+            <div className="input-group-prepend">
+              <label
+                className="input-group-text"
+                for="inputGroupSelect03"
+                style={{ backgroundColor: "#7027A0", color: "#FECD1A" }}
+              >
+                Text color
+              </label>
+            </div>
+            <TwitterPicker
+              className="form-control"
+              id="inputGroupSelect03"
+              width="80%"
+              triangle="hide"
+              colors={[
+                "#f44336",
+                "#e91e63",
+                "#9c27b0",
+                "#673ab7",
+                "#3f51b5",
+                "#2196f3",
+                "#03a9f4",
+                "#00bcd4",
+                "#009688",
+                "#4caf50",
+                "#8bc34a",
+                "#cddc39",
+                "#ffeb3b",
+                "#ffc107",
+                "#ff9800",
+                "#ff5722",
+                "#795548",
+                "#607d8b",
+                "#000000",
+                "#ffffff",
+              ]}
+              color={currentColor}
+              onChangeComplete={handleChangeComplete}
+            />
+          </div>
         </div>
 
-        <hr />
-        <input
-          type="checkbox"
-          onChange={() => {
-            setEnableBorder(!enableBorder);
-          }}
-        />
+        <div>
+          <hr border="1px" />
+        </div>
 
-        <input
-          className="form-control"
-          type="file"
-          name="myImage"
-          value=""
-          onChange={onImageChange}
-        />
+        <h4 className="font15">Add image</h4>
+
+        <div>
+          <input
+            className="form-control"
+            type="file"
+            name="myImage"
+            value=""
+            style={{
+              backgroundColor: "#C996CC",
+              color: "black",
+            }}
+            onChange={onImageChange}
+          />
+        </div>
+        <div>
+          <hr border="1px" />
+        </div>
+
+        <div className="d-flex flex-column">
+          <h4 className="font15">Add QR Code</h4>
+          <div className="input-group">
+            <input
+              style={{
+                backgroundColor: "#C996CC",
+                color: "black",
+                border: "2px solid #3D2C8D",
+              }}
+              placeholder="Enter link..."
+              className="form-control"
+              type="text"
+              value={link}
+              onChange={(e) => {
+                setLink(e.target.value);
+              }}
+            />
+            <button
+              className="btn btn-primary"
+              style={{ marginLeft: "12px", backgroundColor: "#3D2C8D" }}
+              onClick={() => {
+                const copyElements = elements;
+                copyElements.push([
+                  "img",
+                  "https://qrtag.net/api/qr_12.svg?url=" + link,
+                ]);
+                setElements(copyElements);
+                setLink("");
+                setShow("QR code added!");
+                setTimeout(() => setShow(null), 2000);
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <hr />
+        </div>
+
         <ReactToPdf
           options={{ orientation: orientation }}
           targetRef={ref}
@@ -317,7 +539,11 @@ function App() {
           scale={number === null ? 1 : 1 / number}
         >
           {({ toPdf }) => (
-            <button class="btn btn-primary" onClick={toPdf}>
+            <button
+              class="btn btn-primary"
+              style={{ marginTop: "16px", backgroundColor: "#3D2C8D" }}
+              onClick={toPdf}
+            >
               Generate pdf
             </button>
           )}
@@ -331,7 +557,7 @@ function App() {
           height: 1123 * (number === null ? 1 : number),
           left: "34vw",
           position: "absolute",
-          backgroundColor: "white",
+          backgroundColor: backgroundColor,
         }}
         ref={ref}
         onMouseDown={(e) => {
@@ -363,7 +589,12 @@ function App() {
           }}
         >
           <div class="toast-header">
-            {/* <img src="..." class="rounded mr-2" alt="...">  */}
+            <img
+              src={icon}
+              class="rounded"
+              alt="icon"
+              style={{ width: "20px", height: "20px", marginRight: "10px" }}
+            />
             <strong class="mr-auto">Poster Maker</strong>
           </div>
           <div class="toast-body">{show}</div>
