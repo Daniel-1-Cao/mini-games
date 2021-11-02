@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ReactDOM from "react-dom";
 import ReactToPdf from "react-to-pdf";
 import { Rnd } from "react-rnd";
@@ -30,6 +30,7 @@ const fonts = [
 
 function App() {
   const ref = useRef();
+
   const [text, setText] = useState("");
   const [orientation, setOrientation] = useState("portrait");
   const [number, setNumber] = useState(null);
@@ -38,6 +39,29 @@ function App() {
   const [currentFont, setCurrentFont] = useState("font17");
   const [enableBorder, setEnableBorder] = useState(false);
   const [clicked, setClicked] = useState(-1);
+  const [show, setShow] = useState(null);
+
+  useEffect(() => {
+    const handleDelete = (event) => {
+      console.log(event.keyCode, clicked);
+
+      if (event.keyCode === 8 && clicked !== -1) {
+        let copyElements = elements;
+        copyElements.splice(clicked, 1);
+        setElements(copyElements);
+        setClicked(-1);
+        setShow("Element deleted!");
+        setTimeout(() => setShow(null), 2000);
+      }
+    };
+
+    window.addEventListener("keydown", handleDelete);
+
+    return () => {
+      window.removeEventListener("keydown", handleDelete);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clicked]);
 
   const style = {
     display: "flex",
@@ -50,7 +74,7 @@ function App() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: enableBorder ? "solid 1px #78DEC7" : null,
+    border: enableBorder ? "solid 5px rgb(162, 205, 205,0.4)" : null,
   };
 
   const onImageChange = (e) => {
@@ -59,7 +83,8 @@ function App() {
       const copyElements = elements;
       copyElements.push(["img", URL.createObjectURL(img)]);
       setElements(copyElements);
-      console.log(elements);
+      setShow("Image added!");
+      setTimeout(() => setShow(null), 2000);
     }
   };
 
@@ -72,6 +97,7 @@ function App() {
     if (element[0] === "img") {
       return (
         <Rnd
+          className="rounded-3"
           bounds="parent"
           style={clicked === i ? clickedStyle : style}
           onResizeStart={(e, dir, elementRef) => {
@@ -105,6 +131,7 @@ function App() {
     } else {
       return (
         <Rnd
+          className="rounded-3"
           bounds="parent"
           style={clicked === i ? clickedStyle : style}
           onResizeStart={(e, dir, elementRef) => {
@@ -123,12 +150,13 @@ function App() {
           }}
           onClick={() => {
             setCurrentFont(element[2]);
+            console.log(i);
             setClicked(i);
           }}
         >
           <p
             className={element[2] ? element[2] : "font17"}
-            style={{ fontSize: "16px" }}
+            style={{ fontSize: "16px", marginBottom: 0 }}
           >
             {element[1]}
           </p>
@@ -139,7 +167,7 @@ function App() {
 
   return (
     <div
-      className="d-flex flex-row"
+      className="d-flex flex-row font14"
       style={{
         position: "relative",
         overflow: "auto",
@@ -148,10 +176,10 @@ function App() {
       }}
     >
       <div className="d-flex flex-column m-3" style={{ width: "33vw" }}>
-        <h1>Poster maker</h1>
+        <h1 className="font12">Poster maker</h1>
         <hr />
         <div className="d-flex flex-column" name="page-setting">
-          <h4>Page setting</h4>
+          <h4 className="font15">Page setting</h4>
           <div className="input-group mb-3">
             <div className="input-group-prepend">
               <label
@@ -204,7 +232,7 @@ function App() {
         </div>
         <hr />
         <div className="d-flex flex-column" name="add-text">
-          <h4>Add text</h4>
+          <h4 className="font15">Add text</h4>
           <div className="input-group mb-3">
             <input
               style={{ backgroundColor: "#C996CC", color: "black" }}
@@ -218,13 +246,14 @@ function App() {
             />
             <button
               className="btn btn-primary"
-              style={{ marginLeft: "12px" }}
+              style={{ marginLeft: "12px", backgroundColor: "#3D2C8D" }}
               onClick={() => {
                 const copyElements = elements;
                 console.log(currentFont);
                 copyElements.push(["text", text, currentFont]);
                 setElements(copyElements);
                 setText("");
+                setShow("Text added!");
               }}
             >
               Add
@@ -278,6 +307,7 @@ function App() {
           className="form-control"
           type="file"
           name="myImage"
+          value=""
           onChange={onImageChange}
         />
         <ReactToPdf
@@ -313,6 +343,31 @@ function App() {
         {elements.map((element, i) => {
           return renderElement(element, i);
         })}
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          right: 0,
+          minHeight: "300px",
+          width: "300px",
+        }}
+      >
+        <div
+          className="toast"
+          style={{
+            position: "absolute",
+            top: "0px",
+            right: "0px",
+            display: show === null ? "none" : "block",
+          }}
+        >
+          <div class="toast-header">
+            {/* <img src="..." class="rounded mr-2" alt="...">  */}
+            <strong class="mr-auto">Poster Maker</strong>
+          </div>
+          <div class="toast-body">{show}</div>
+        </div>
       </div>
     </div>
   );
