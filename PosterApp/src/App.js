@@ -515,7 +515,7 @@ function App() {
                 const copyElements = elements;
                 copyElements.push([
                   "img",
-                  "https://qrtag.net/api/qr_12.svg?url=" + link,
+                  "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + link,
                 ]);
                 setElements(copyElements);
                 setLink("");
